@@ -1,3 +1,5 @@
+// client/src/pages/EditProductPage.jsx
+
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';

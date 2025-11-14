@@ -22,7 +22,7 @@ export const router = createBrowserRouter([
       },
       {
         path: "products",
-        element: <ProductsPage />,
+        element: <ProductPage />,
       },
       // Protected routes - require authentication
       {
