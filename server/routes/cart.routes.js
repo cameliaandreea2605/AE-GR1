@@ -33,18 +33,11 @@ router.post('/', verifyToken, async (req, res) => {
             return res.status(404).json({ success: false, message: 'Product not found', data: {} });
         }
 
-        if (product.stock < quantity) {
-            return res.status(400).json({ success: false, message: 'Not enough stock', data: {} });
-        }
-
         let cartItem = await Cart.findOne({
             where: { userId, productId }
         });
 
         if (cartItem) {
-            if (product.stock < cartItem.quantity + quantity) {
-                return res.status(400).json({ success: false, message: 'Not enough stock', data: {} });
-            }
             cartItem.quantity += quantity;
             await cartItem.save();
         } else {
@@ -66,15 +59,6 @@ router.put('/:productId', verifyToken, async (req, res) => {
 
         if (!quantity || quantity <= 0) {
             return res.status(400).json({ success: false, message: 'Invalid quantity', data: {} });
-        }
-
-        const product = await Product.findByPk(productId);
-        if (!product) {
-            return res.status(404).json({ success: false, message: 'Product not found', data: {} });
-        }
-
-        if (product.stock < quantity) {
-            return res.status(400).json({ success: false, message: 'Not enough stock', data: {} });
         }
 
         const cartItem = await Cart.findOne({
