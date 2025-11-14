@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import axiosAuth from '../axios/axiosAuth';
 
 export const CartContext = createContext();
@@ -6,6 +7,7 @@ export const CartContext = createContext();
 export const CartProvider = ({ children }) => {
     const [cart, setCart] = useState([]);
     const [loading, setLoading] = useState(true);
+    const { loggedIn } = useSelector((state) => state.user);
 
     const fetchCart = async () => {
         try {
@@ -21,14 +23,13 @@ export const CartProvider = ({ children }) => {
     };
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (token) {
+        if (loggedIn) {
             fetchCart();
         } else {
             setCart([]);
             setLoading(false);
         }
-    }, []);
+    }, [loggedIn]);
 
     const addToCart = async (product, quantity = 1) => {
         try {
@@ -89,12 +90,13 @@ export const CartProvider = ({ children }) => {
         }
     };
 
-    const logoutCart = () => {
-        setCart([]);
-    };
+    // The logoutCart function is no longer needed as the useEffect handles clearing the cart on logout
+    // const logoutCart = () => {
+    //     setCart([]);
+    // };
 
     return (
-        <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, increaseQuantity, decreaseQuantity, loading, logoutCart }}>
+        <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, increaseQuantity, decreaseQuantity, loading }}>
             {children}
         </CartContext.Provider>
     );
