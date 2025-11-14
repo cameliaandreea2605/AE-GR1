@@ -7,6 +7,7 @@ import Login from "./pages/Login";
 import CreateProductPage from "./pages/CreateProductPage";
 import EditProductPage from "./pages/EditProductPage";
 import ProfilePage from "./pages/ProfilePage";
+import CartPage from "./pages/CartPage";
 import { ProtectedLayout, AuthLayout } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
 
@@ -30,6 +31,10 @@ export const router = createBrowserRouter([
           {
             path: "profile",
             element: <ProfilePage />,
+          },
+          {
+            path: "cart",
+            element: <CartPage />,
           },
         ],
       },

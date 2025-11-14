@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useContext } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { fetchProducts, deleteProduct } from '../api/product.routes';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { CartContext } from '../context/CartContext';
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
@@ -13,6 +14,7 @@ export default function ProductsPage() {
   const user = useSelector((state) => state.user.user);
   const isAdmin = user?.role === 'admin';
   const navigate = useNavigate();
+  const { addToCart } = useContext(CartContext);
 
   useEffect(() => {
     const getProducts = async () => {
@@ -63,6 +65,11 @@ export default function ProductsPage() {
 
   const handleCreateClick = () => {
     navigate('/products/create');
+  };
+
+  const handleAddToCart = (product) => {
+    addToCart(product);
+    toast.success(`${product.name} added to cart`);
   };
 
   if (loading) {
@@ -152,6 +159,18 @@ export default function ProductsPage() {
                     </button>
                   </div>
                 )}
+                 <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
+                  <button
+                    type="button"
+                    className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-md shadow-lg transition-colors duration-200"
+                    onClick={() => handleAddToCart(product)}
+                    title="Add to Cart"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </button>
+                </div>
               </div>
               <div className="mt-4 flex justify-between">
                 <div>
