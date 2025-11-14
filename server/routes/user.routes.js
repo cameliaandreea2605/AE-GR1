@@ -19,6 +19,24 @@ router.get('/', verifyToken, async (req, res) => {
     }
 })
 
+router.get('/profile', verifyToken, async (req, res) => {
+    try {
+        const user = await User.findByPk(req.userId, {
+            attributes: {
+                exclude: ['password']
+            }
+        });
+
+        if (!user) {
+            return res.status(404).json({success: false, message: 'User not found', data: {}})
+        }
+
+        res.status(200).json({success: true, message: 'User was found', data: user})
+    } catch (error) {
+        res.status(500).json({success: false, message: 'Error retrieving user', data: error.message});
+    }
+})
+
 router.get('/:id', verifyToken, async (req, res) => {
     try {
         const id = req.params.id;

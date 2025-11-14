@@ -1,4 +1,5 @@
-import { axiosNoAuth } from "../axios/axiosNoAuth";
+import axiosAuth from "../axios/axiosAuth";
+import axiosNoAuth from "../axios/axiosNoAuth";
 
 export const registerUser = async (userData) => {
   try {
@@ -9,3 +10,13 @@ export const registerUser = async (userData) => {
     return error.response?.data;
   }
 };
+
+export const getProfile = async () => {
+  try {
+    const response = await axiosAuth.get('/users/profile');
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching profile:", error);
+    return error.response?.data;
+  }
+}

@@ -6,6 +6,7 @@ import Register from "./pages/Register";
 import Login from "./pages/Login";
 import CreateProductPage from "./pages/CreateProductPage";
 import EditProductPage from "./pages/EditProductPage";
+import ProfilePage from "./pages/ProfilePage";
 import { ProtectedLayout, AuthLayout } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
 
@@ -25,7 +26,12 @@ export const router = createBrowserRouter([
       // Protected routes - require authentication
       {
         element: <ProtectedLayout />,
-        children: [],
+        children: [
+          {
+            path: "profile",
+            element: <ProfilePage />,
+          },
+        ],
       },
       // Admin routes - require authentication AND admin role
       {
