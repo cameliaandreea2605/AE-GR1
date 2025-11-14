@@ -72,13 +72,11 @@ export default function Navbar() {
             </div>
           </div>
           <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
-            {loggedIn && (
-              <Link to="/cart" className="relative rounded-full p-1 text-gray-400 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">
-                <span className="absolute -inset-1.5" />
-                <span className="sr-only">View shopping cart</span>
-                <ShoppingCartIcon aria-hidden="true" className="size-6" />
-              </Link>
-            )}
+            <Link to="/cart" className="relative rounded-full p-1 text-gray-400 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">
+              <span className="absolute -inset-1.5" />
+              <span className="sr-only">View shopping cart</span>
+              <ShoppingCartIcon aria-hidden="true" className="size-6" />
+            </Link>
 
             {/* Profile dropdown */}
             <Menu as="div" className="relative ml-3">

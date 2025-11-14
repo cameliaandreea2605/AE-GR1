@@ -37,11 +37,22 @@ router.post('/', verifyToken, async (req, res) => {
             where: { userId, productId }
         });
 
+        let newQuantity;
         if (cartItem) {
-            cartItem.quantity += quantity;
+            newQuantity = cartItem.quantity + quantity;
+        } else {
+            newQuantity = quantity;
+        }
+
+        if (newQuantity > product.stock) {
+            return res.status(400).json({ success: false, message: `Insufficient stock for ${product.name}. Available: ${product.stock}`, data: {} });
+        }
+
+        if (cartItem) {
+            cartItem.quantity = newQuantity;
             await cartItem.save();
         } else {
-            cartItem = await Cart.create({ userId, productId, quantity });
+            cartItem = await Cart.create({ userId, productId, quantity: newQuantity });
         }
 
         res.status(200).json({ success: true, message: 'Product added to cart successfully', data: cartItem });
@@ -57,8 +68,13 @@ router.put('/:productId', verifyToken, async (req, res) => {
         const { productId } = req.params;
         const { quantity } = req.body;
 
-        if (!quantity || quantity <= 0) {
-            return res.status(400).json({ success: false, message: 'Invalid quantity', data: {} });
+        const product = await Product.findByPk(productId);
+        if (!product) {
+            return res.status(404).json({ success: false, message: 'Product not found', data: {} });
+        }
+
+        if (quantity > product.stock) {
+            return res.status(400).json({ success: false, message: `Insufficient stock for ${product.name}. Available: ${product.stock}`, data: {} });
         }
 
         const cartItem = await Cart.findOne({

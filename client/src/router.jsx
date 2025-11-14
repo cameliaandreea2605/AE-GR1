@@ -24,6 +24,10 @@ export const router = createBrowserRouter([
         path: "products",
         element: <ProductsPage />,
       },
+      {
+        path: "cart",
+        element: <CartPage />,
+      },
       // Protected routes - require authentication
       {
         element: <ProtectedLayout />,
@@ -31,10 +35,6 @@ export const router = createBrowserRouter([
           {
             path: "profile",
             element: <ProfilePage />,
-          },
-          {
-            path: "cart",
-            element: <CartPage />,
           },
         ],
       },

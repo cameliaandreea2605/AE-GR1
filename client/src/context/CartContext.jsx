@@ -1,102 +1,188 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import axiosAuth from '../axios/axiosAuth';
 
 export const CartContext = createContext();
 
+const getGuestCartFromLocalStorage = () => {
+    try {
+        const guestCart = localStorage.getItem('guestCart');
+        return guestCart ? JSON.parse(guestCart) : [];
+    } catch (error) {
+        console.error('Error parsing guest cart from localStorage:', error);
+        return [];
+    }
+};
+
+const saveGuestCartToLocalStorage = (guestCart) => {
+    try {
+        localStorage.setItem('guestCart', JSON.stringify(guestCart));
+    } catch (error) {
+        console.error('Error saving guest cart to localStorage:', error);
+    }
+};
+
 export const CartProvider = ({ children }) => {
-    const [cart, setCart] = useState([]);
+    const [userCart, setUserCart] = useState([]);
+    const [guestCart, setGuestCart] = useState([]);
     const [loading, setLoading] = useState(true);
     const { loggedIn } = useSelector((state) => state.user);
 
-    const fetchCart = async () => {
-        try {
-            setLoading(true);
-            const response = await axiosAuth.get('/cart');
-            setCart(response.data.data.map(item => ({ ...item.Product, quantity: item.quantity, cartItemId: item.id })));
-        } catch (error) {
-            console.error('Error fetching cart:', error);
-            setCart([]);
-        } finally {
-            setLoading(false);
-        }
-    };
-
+    // Load guest cart from localStorage on initial mount if not logged in
     useEffect(() => {
-        if (loggedIn) {
-            fetchCart();
-        } else {
-            setCart([]);
-            setLoading(false);
+        if (!loggedIn) {
+            setGuestCart(getGuestCartFromLocalStorage());
         }
     }, [loggedIn]);
 
-    const addToCart = async (product, quantity = 1) => {
+    const fetchUserCart = useCallback(async () => {
         try {
-            const response = await axiosAuth.post('/cart', { productId: product.id, quantity });
-            fetchCart(); // Re-fetch cart to update state
-            return response.data;
+            setLoading(true);
+            const response = await axiosAuth.get('/cart');
+            setUserCart(response.data.data.map(item => ({ ...item.Product, quantity: item.quantity, cartItemId: item.id })));
         } catch (error) {
-            console.error('Error adding to cart:', error);
-            throw error;
+            console.error('Error fetching user cart:', error);
+            setUserCart([]);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (loggedIn) {
+            fetchUserCart();
+            // Clear guest cart when user logs in
+            saveGuestCartToLocalStorage([]);
+            setGuestCart([]);
+        } else {
+            setUserCart([]);
+            setLoading(false);
+            // Load guest cart when user logs out or is not logged in
+            setGuestCart(getGuestCartFromLocalStorage());
+        }
+    }, [loggedIn, fetchUserCart]);
+
+    const addToCart = async (product, quantity = 1) => {
+        if (loggedIn) {
+            try {
+                const response = await axiosAuth.post('/cart', { productId: product.id, quantity });
+                fetchUserCart();
+                return response.data;
+            } catch (error) {
+                console.error('Error adding to user cart:', error);
+                throw error;
+            }
+        } else {
+            // Guest cart logic
+            const existingItemIndex = guestCart.findIndex(item => item.id === product.id);
+            let updatedGuestCart;
+
+            if (existingItemIndex > -1) {
+                updatedGuestCart = [...guestCart];
+                updatedGuestCart[existingItemIndex].quantity += quantity;
+            } else {
+                updatedGuestCart = [...guestCart, { ...product, quantity }];
+            }
+            setGuestCart(updatedGuestCart);
+            saveGuestCartToLocalStorage(updatedGuestCart);
+            return { success: true, message: 'Product added to guest cart successfully', data: updatedGuestCart };
         }
     };
 
     const increaseQuantity = async (productId) => {
-        try {
-            const existingProduct = cart.find((item) => item.id === productId);
-            if (existingProduct) {
-                await axiosAuth.put(`/cart/${productId}`, { quantity: existingProduct.quantity + 1 });
-                fetchCart();
+        if (loggedIn) {
+            try {
+                const existingProduct = userCart.find((item) => item.id === productId);
+                if (existingProduct) {
+                    await axiosAuth.put(`/cart/${productId}`, { quantity: existingProduct.quantity + 1 });
+                    fetchUserCart();
+                }
+            } catch (error) {
+                console.error('Error increasing quantity in user cart:', error);
+                throw error;
             }
-        } catch (error) {
-            console.error('Error increasing quantity:', error);
-            throw error;
+        } else {
+            // Guest cart logic
+            const existingItemIndex = guestCart.findIndex(item => item.id === productId);
+            if (existingItemIndex > -1) {
+                const updatedGuestCart = [...guestCart];
+                updatedGuestCart[existingItemIndex].quantity += 1;
+                setGuestCart(updatedGuestCart);
+                saveGuestCartToLocalStorage(updatedGuestCart);
+            }
         }
     };
 
     const decreaseQuantity = async (productId) => {
-        try {
-            const existingProduct = cart.find((item) => item.id === productId);
-            if (existingProduct && existingProduct.quantity > 1) {
-                await axiosAuth.put(`/cart/${productId}`, { quantity: existingProduct.quantity - 1 });
-                fetchCart();
-            } else if (existingProduct && existingProduct.quantity === 1) {
-                await removeFromCart(productId);
+        if (loggedIn) {
+            try {
+                const existingProduct = userCart.find((item) => item.id === productId);
+                if (existingProduct && existingProduct.quantity > 1) {
+                    await axiosAuth.put(`/cart/${productId}`, { quantity: existingProduct.quantity - 1 });
+                    fetchUserCart();
+                } else if (existingProduct && existingProduct.quantity === 1) {
+                    await removeFromCart(productId);
+                }
+            } catch (error) {
+                console.error('Error decreasing quantity in user cart:', error);
+                throw error;
             }
-        } catch (error) {
-            console.error('Error decreasing quantity:', error);
-            throw error;
+        } else {
+            // Guest cart logic
+            const existingItemIndex = guestCart.findIndex(item => item.id === productId);
+            if (existingItemIndex > -1) {
+                const updatedGuestCart = [...guestCart];
+                if (updatedGuestCart[existingItemIndex].quantity > 1) {
+                    updatedGuestCart[existingItemIndex].quantity -= 1;
+                    setGuestCart(updatedGuestCart);
+                    saveGuestCartToLocalStorage(updatedGuestCart);
+                } else {
+                    // If quantity becomes 0, remove from guest cart
+                    const filteredGuestCart = guestCart.filter(item => item.id !== productId);
+                    setGuestCart(filteredGuestCart);
+                    saveGuestCartToLocalStorage(filteredGuestCart);
+                }
+            }
         }
     };
 
     const removeFromCart = async (productId) => {
-        try {
-            await axiosAuth.delete(`/cart/${productId}`);
-            fetchCart();
-        } catch (error) {
-            console.error('Error removing from cart:', error);
-            throw error;
+        if (loggedIn) {
+            try {
+                await axiosAuth.delete(`/cart/${productId}`);
+                fetchUserCart();
+            } catch (error) {
+                console.error('Error removing from user cart:', error);
+                throw error;
+            }
+        } else {
+            // Guest cart logic
+            const updatedGuestCart = guestCart.filter(item => item.id !== productId);
+            setGuestCart(updatedGuestCart);
+            saveGuestCartToLocalStorage(updatedGuestCart);
         }
     };
 
     const clearCart = async () => {
-        try {
-            await axiosAuth.delete('/cart');
-            fetchCart();
-        } catch (error) {
-            console.error('Error clearing cart:', error);
-            throw error;
+        if (loggedIn) {
+            try {
+                await axiosAuth.delete('/cart');
+                fetchUserCart();
+            } catch (error) {
+                console.error('Error clearing user cart:', error);
+                throw error;
+            }
+        } else {
+            // Guest cart logic
+            setGuestCart([]);
+            saveGuestCartToLocalStorage([]);
         }
     };
 
-    // The logoutCart function is no longer needed as the useEffect handles clearing the cart on logout
-    // const logoutCart = () => {
-    //     setCart([]);
-    // };
+    const displayCart = loggedIn ? userCart : guestCart;
 
     return (
-        <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, increaseQuantity, decreaseQuantity, loading }}>
+        <CartContext.Provider value={{ cart: displayCart, addToCart, removeFromCart, clearCart, increaseQuantity, decreaseQuantity, loading }}>
             {children}
         </CartContext.Provider>
     );
