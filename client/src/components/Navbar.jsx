@@ -4,6 +4,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import { logout } from '../store/slices/userSlice'
 import { classNames } from '../utils/tailwind'
+import { useContext } from 'react'
+import { CartContext } from '../context/CartContext'
 
 const navigation = [
   { name: 'Homepage', href: '/' },
@@ -14,6 +16,7 @@ export default function Navbar() {
   const location = useLocation()
   const navigate = useNavigate()
   const dispatch = useDispatch()
+  const { logoutCart } = useContext(CartContext)
   const loggedIn = useSelector((state) => state.user.loggedIn)
 
   const isActive = (href) => {
@@ -23,6 +26,7 @@ export default function Navbar() {
   const handleAuthClick = () => {
     if (loggedIn) {
       dispatch(logout())
+      logoutCart()
       navigate('/')
     } else {
       navigate('/login')
