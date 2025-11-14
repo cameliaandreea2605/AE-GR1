@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import axiosAuth from '../axios/axiosAuth';
+import { toast } from 'sonner'; // Import toast
 
 export const CartContext = createContext();
 
@@ -67,24 +68,41 @@ export const CartProvider = ({ children }) => {
             try {
                 const response = await axiosAuth.post('/cart', { productId: product.id, quantity });
                 fetchUserCart();
+                toast.success('Product added to cart!');
                 return response.data;
             } catch (error) {
                 console.error('Error adding to user cart:', error);
+                if (error.response && error.response.data && error.response.data.message) {
+                    toast.error(error.response.data.message);
+                } else {
+                    toast.error('Failed to add product to cart.');
+                }
                 throw error;
             }
         } else {
             // Guest cart logic
             const existingItemIndex = guestCart.findIndex(item => item.id === product.id);
-            let updatedGuestCart;
+            let newQuantity = quantity;
 
             if (existingItemIndex > -1) {
+                newQuantity = guestCart[existingItemIndex].quantity + quantity;
+            }
+
+            if (newQuantity > product.stock) {
+                toast.error(`Insufficient stock for ${product.name}. Available: ${product.stock}`);
+                return; // Prevent adding to cart if stock is insufficient
+            }
+
+            let updatedGuestCart;
+            if (existingItemIndex > -1) {
                 updatedGuestCart = [...guestCart];
-                updatedGuestCart[existingItemIndex].quantity += quantity;
+                updatedGuestCart[existingItemIndex].quantity = newQuantity;
             } else {
-                updatedGuestCart = [...guestCart, { ...product, quantity }];
+                updatedGuestCart = [...guestCart, { ...product, quantity: newQuantity }];
             }
             setGuestCart(updatedGuestCart);
             saveGuestCartToLocalStorage(updatedGuestCart);
+            toast.success('Product added to guest cart!');
             return { success: true, message: 'Product added to guest cart successfully', data: updatedGuestCart };
         }
     };
@@ -94,17 +112,34 @@ export const CartProvider = ({ children }) => {
             try {
                 const existingProduct = userCart.find((item) => item.id === productId);
                 if (existingProduct) {
+                    // Fetch product details to get current stock
+                    const productDetails = await axiosAuth.get(`/products/${productId}`); // Assuming an endpoint to get product details
+                    if (existingProduct.quantity + 1 > productDetails.data.stock) {
+                        toast.error(`Cannot add more. Insufficient stock for ${existingProduct.name}. Available: ${productDetails.data.stock}`);
+                        return;
+                    }
                     await axiosAuth.put(`/cart/${productId}`, { quantity: existingProduct.quantity + 1 });
                     fetchUserCart();
                 }
             } catch (error) {
                 console.error('Error increasing quantity in user cart:', error);
+                if (error.response && error.response.data && error.response.data.message) {
+                    toast.error(error.response.data.message);
+                } else {
+                    toast.error('Failed to increase product quantity.');
+                }
                 throw error;
             }
         } else {
             // Guest cart logic
             const existingItemIndex = guestCart.findIndex(item => item.id === productId);
             if (existingItemIndex > -1) {
+                const productInGuestCart = guestCart[existingItemIndex];
+                // Assuming product.stock is available in the guest cart item
+                if (productInGuestCart.quantity + 1 > productInGuestCart.stock) {
+                    toast.error(`Cannot add more. Insufficient stock for ${productInGuestCart.name}. Available: ${productInGuestCart.stock}`);
+                    return;
+                }
                 const updatedGuestCart = [...guestCart];
                 updatedGuestCart[existingItemIndex].quantity += 1;
                 setGuestCart(updatedGuestCart);
@@ -125,6 +160,11 @@ export const CartProvider = ({ children }) => {
                 }
             } catch (error) {
                 console.error('Error decreasing quantity in user cart:', error);
+                if (error.response && error.response.data && error.response.data.message) {
+                    toast.error(error.response.data.message);
+                } else {
+                    toast.error('Failed to decrease product quantity.');
+                }
                 throw error;
             }
         } else {
@@ -151,8 +191,14 @@ export const CartProvider = ({ children }) => {
             try {
                 await axiosAuth.delete(`/cart/${productId}`);
                 fetchUserCart();
+                toast.success('Product removed from cart.');
             } catch (error) {
                 console.error('Error removing from user cart:', error);
+                if (error.response && error.response.data && error.response.data.message) {
+                    toast.error(error.response.data.message);
+                } else {
+                    toast.error('Failed to remove product from cart.');
+                }
                 throw error;
             }
         } else {
@@ -160,6 +206,7 @@ export const CartProvider = ({ children }) => {
             const updatedGuestCart = guestCart.filter(item => item.id !== productId);
             setGuestCart(updatedGuestCart);
             saveGuestCartToLocalStorage(updatedGuestCart);
+            toast.success('Product removed from guest cart.');
         }
     };
 
@@ -168,14 +215,21 @@ export const CartProvider = ({ children }) => {
             try {
                 await axiosAuth.delete('/cart');
                 fetchUserCart();
+                toast.success('Cart cleared.');
             } catch (error) {
                 console.error('Error clearing user cart:', error);
+                if (error.response && error.response.data && error.response.data.message) {
+                    toast.error(error.response.data.message);
+                } else {
+                    toast.error('Failed to clear cart.');
+                }
                 throw error;
             }
         } else {
             // Guest cart logic
             setGuestCart([]);
             saveGuestCartToLocalStorage([]);
+            toast.success('Guest cart cleared.');
         }
     };
 
